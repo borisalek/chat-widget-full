@@ -17,26 +17,29 @@
     --text-dim: #8a7a70;
   }
 
-  html, body {
+  html {
+    height: 100%;
+  }
+
+  body {
+    height: 100%;
     background: var(--bg);
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
-    margin: 0;
-  }
-
-  /* ── Outer wrapper — full page column ── */
-  .page {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    overflow: hidden; /* prevent body scroll, we scroll inside */
   }
 
-  /* ── Scrollable content area ── */
+  /* ── Scrollable messages ── */
   .scroll-area {
     flex: 1;
     overflow-y: auto;
-    padding: 56px 32px 32px;
+    padding: 56px 32px 40px;
+    min-height: 0; /* critical for flex child to shrink */
   }
+  .scroll-area::-webkit-scrollbar { width: 4px; }
+  .scroll-area::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
 
   .inner {
     max-width: 1100px;
@@ -55,9 +58,7 @@
   }
 
   /* ── Timeline ── */
-  .timeline {
-    position: relative;
-  }
+  .timeline { position: relative; }
 
   .curves-svg {
     position: absolute;
@@ -100,14 +101,13 @@
     font-weight: 300;
   }
 
-  /* ── Asterisk connector ── */
+  /* ── Asterisk ── */
   .asterisk {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
     font-size: 16px;
     color: var(--orange);
-    font-weight: 400;
     line-height: 1;
     pointer-events: none;
   }
@@ -116,8 +116,7 @@
 
   /* ── Avatar ── */
   .avatar {
-    width: 42px;
-    height: 42px;
+    width: 42px; height: 42px;
     border-radius: 3px;
     overflow: hidden;
     flex-shrink: 0;
@@ -149,12 +148,12 @@
     40%{ opacity:1; transform:scale(1); }
   }
 
-  /* ── Input bar — fixed to bottom of page ── */
+  /* ── Input bar — never moves ── */
   .input-section {
     flex-shrink: 0;
-    padding: 20px 32px 28px;
+    padding: 16px 32px 24px;
     background: var(--bg);
-    border-top: 1px solid rgba(201,79,12,0.15);
+    border-top: 1px solid rgba(201,79,12,0.2);
   }
 
   .input-inner {
@@ -169,7 +168,7 @@
     align-items: center;
     padding: 0 20px;
     cursor: text;
-    min-height: 64px;
+    min-height: 60px;
     position: relative;
     transition: box-shadow 0.3s;
   }
@@ -212,7 +211,7 @@
   .input-bar.active .placeholder-text { display: none; }
 
   .send-btn {
-    width: 46px; height: 46px;
+    width: 44px; height: 44px;
     background: var(--orange);
     border: none; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
@@ -226,24 +225,19 @@
 
   /* ── Mobile ── */
   @media (max-width: 600px) {
-    .scroll-area { padding: 36px 16px 24px; }
-    .input-section { padding: 16px 16px 20px; }
-    .header { font-size: 11px; letter-spacing: 0.12em; margin-bottom: 36px; }
+    .scroll-area { padding: 32px 16px 24px; }
+    .input-section { padding: 12px 16px 16px; }
+    .header { font-size: 11px; letter-spacing: 0.12em; margin-bottom: 32px; }
     .bubble { width: 88%; padding: 14px 16px; }
     .bubble p { font-size: 13px; }
     .msg-row { margin-bottom: 28px; }
     .avatar { width: 32px; height: 32px; margin-right: 10px; }
     .asterisk { display: none; }
-    .placeholder-text { font-size: 16px; }
-    .send-btn { width: 40px; height: 40px; }
   }
 </style>
 </head>
 <body>
 
-<div class="page">
-
-  <!-- Scrollable messages -->
   <div class="scroll-area" id="scrollArea">
     <div class="inner">
       <div class="header">
@@ -257,7 +251,6 @@
     </div>
   </div>
 
-  <!-- Fixed input bar -->
   <div class="input-section">
     <div class="input-inner">
       <div class="input-bar" id="inputBar">
@@ -272,12 +265,10 @@
     </div>
   </div>
 
-</div>
-
 <script>
 const WEBHOOK_URL = 'https://nonpatented-enchantedly-reyes.ngrok-free.dev/webhook/f406671e-c954-4691-b39a-66c90aa2f103/chat';
 const ROUTE       = 'general';
-const AGENT_AVATAR = ''; // put image URL here
+const AGENT_AVATAR = '';
 
 const INITIAL = [
   { side: 'left',  text: 'Interactively myocardinate future-proof benefits for 24/7 networks. Credibly create enterprise relationships whereas turnkey channels. Seamlessly harness client-centered.' },
@@ -286,13 +277,13 @@ const INITIAL = [
   { side: 'right', text: 'Completely transition an expanded array of e-commerce rather than proactive supply chains. Rapidiously deploy premier imperatives for cross-unit bandwidth. Authoritatively integrate multimedia based leadership after economically sound deliverables. Distinctively recaptiualize process-centric leadership before team building data.<br><br>Rapidiously leverage other\'s 2.0 content whereas interactive technology. Conveniently visualize frictionless human capital whereas bricks-and-clicks applications. Proactively engage compelling schemas for.' },
 ];
 
-const timeline  = document.getElementById('timeline');
-const svg       = document.getElementById('curvesSvg');
+const timeline   = document.getElementById('timeline');
+const svg        = document.getElementById('curvesSvg');
 const scrollArea = document.getElementById('scrollArea');
-const inputBar  = document.getElementById('inputBar');
-const textarea  = document.getElementById('textarea');
-const sendBtn   = document.getElementById('sendBtn');
-const sessionId = crypto.randomUUID();
+const inputBar   = document.getElementById('inputBar');
+const textarea   = document.getElementById('textarea');
+const sendBtn    = document.getElementById('sendBtn');
+const sessionId  = crypto.randomUUID();
 
 function addMsg(text, side, typing = false) {
   const row = document.createElement('div');
@@ -322,8 +313,7 @@ function addMsg(text, side, typing = false) {
   row.appendChild(bubble);
   timeline.appendChild(row);
 
-  // scroll to bottom
-  setTimeout(() => { scrollArea.scrollTop = scrollArea.scrollHeight; }, 50);
+  setTimeout(() => { scrollArea.scrollTop = scrollArea.scrollHeight; }, 60);
   requestAnimationFrame(() => requestAnimationFrame(drawCurves));
   return { row, bubble };
 }
@@ -334,9 +324,9 @@ function drawCurves() {
   const tlRect = timeline.getBoundingClientRect();
 
   for (let i = 0; i < rows.length - 1; i++) {
-    const from    = rows[i];
-    const to      = rows[i + 1];
-    const fromAst = from.querySelector('.asterisk');
+    const from     = rows[i];
+    const to       = rows[i + 1];
+    const fromAst  = from.querySelector('.asterisk');
     const toBubble = to.querySelector('.bubble');
     if (!fromAst || !toBubble) continue;
 
@@ -346,9 +336,7 @@ function drawCurves() {
 
     const x1 = astRect.left + astRect.width  / 2 - tlRect.left;
     const y1 = astRect.top  + astRect.height / 2 - tlRect.top;
-    const x2 = fromSide === 'left'
-      ? toRect.right - tlRect.left
-      : toRect.left  - tlRect.left;
+    const x2 = fromSide === 'left' ? toRect.right - tlRect.left : toRect.left - tlRect.left;
     const y2 = toRect.top + toRect.height / 2 - tlRect.top;
 
     const push = fromSide === 'left' ? 80 : -80;
@@ -389,7 +377,6 @@ sendBtn.addEventListener('click', submit);
 async function submit() {
   const msg = textarea.value.trim();
   if (!msg) return;
-
   textarea.value = '';
   textarea.style.height = 'auto';
   sendBtn.disabled = true;
@@ -422,6 +409,7 @@ async function submit() {
 }
 
 window.addEventListener('resize', drawCurves);
+scrollArea.addEventListener('scroll', drawCurves);
 </script>
 </body>
 </html>
