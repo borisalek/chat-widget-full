@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Section Chat</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --orange: #c94f0c;
+    --orange-light: #e06030;
+    --orange-glow: rgba(201,79,12,0.35);
+    --bg: #0a0a0a;
+    --text: #e8e0d8;
+    --text-dim: #8a7a70;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    margin: 0;
+  }
+
+  .section {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 56px 32px 0;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 60px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(12px, 1.3vw, 15px);
+    letter-spacing: 0.2em;
+    color: var(--orange-light);
+    line-height: 1.8;
+  }
+
+  .timeline {
+    position: relative;
+  }
+
+  .curves-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    overflow: visible;
+    z-index: 0;
+  }
+
+  .msg-row {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 48px;
+    position: relative;
+    z-index: 1;
+  }
+  .msg-row.left  { justify-content: flex-start; }
+  .msg-row.right { justify-content: flex-end; }
+
+  .bubble {
+    width: 68%;
+    padding: 20px 24px;
+    position: relative;
+  }
+  .msg-row.left .bubble {
+    background: #3d1a08;
+    border-left: 3px solid var(--orange);
+  }
+  .msg-row.right .bubble {
+    background: #161616;
+    border-right: 3px solid var(--orange);
+  }
+  .bubble p {
+    font-size: 13.5px;
+    line-height: 1.75;
+    color: var(--text);
+    font-weight: 300;
+  }
+
+  .asterisk {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: var(--orange);
+    font-weight: 400;
+    line-height: 1;
+    pointer-events: none;
+  }
+  .msg-row.left .asterisk  { right: -28px; }
+  .msg-row.right .asterisk { left: -28px; }
+
+  .avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 3px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #222;
+    margin-top: 6px;
+    margin-right: 14px;
+    order: -1;
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .avatar-initials {
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, var(--orange) 0%, #7a2e04 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; color: #fff;
+  }
+
+  .typing-dots { display: flex; gap: 5px; padding: 4px 0; }
+  .typing-dots span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--orange);
+    animation: blink 1.2s infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: .2s; }
+  .typing-dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink {
+    0%,80%,100%{opacity:.2;transform:scale(.8)}
+    40%{opacity:1;transform:scale(1)}
+  }
+
+  .input-section {
+    position: sticky;
+    bottom: 0;
+    padding: 40px 0 36px;
+    background: linear-gradient(to top, var(--bg) 65%, transparent);
+  }
+
+  .input-bar {
+    border: 1px solid var(--orange);
+    background: #0d0d0d;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    cursor: text;
+    min-height: 64px;
+    position: relative;
+    transition: box-shadow 0.3s;
+  }
+  .input-bar.active {
+    box-shadow: 0 0 40px var(--orange-glow), inset 0 0 20px rgba(201,79,12,0.05);
+  }
+  .input-bar::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--orange), transparent);
+    transform: scaleX(0);
+    transition: transform 0.4s;
+  }
+  .input-bar.active::after { transform: scaleX(1); }
+
+  .placeholder-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 0.14em;
+    color: var(--text-dim);
+    flex: 1;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .input-bar textarea {
+    flex: 1;
+    background: transparent;
+    border: none; outline: none; resize: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    max-height: 120px;
+    line-height: 1.5;
+    display: none;
+  }
+  .input-bar.active textarea { display: block; }
+  .input-bar.active .placeholder-text { display: none; }
+
+  .send-btn {
+    width: 46px; height: 46px;
+    background: var(--orange);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%);
+    transition: background 0.2s, opacity 0.2s;
+  }
+  .send-btn:hover { background: var(--orange-light); }
+  .send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .send-btn svg { width: 18px; height: 18px; }
+</style>
+</head>
+<body>
+
+<div class="section">
+  <div class="header">
+    ASK THOMAS GIBBS ABOUT THE JOURNEY BEHIND THE RESULTS,<br>
+    THE ROUTINES THAT SHAPED HIS DISCIPLINE,<br>
+    AND THE MINDSET SHIFTS THAT HELPED HIM TRADE WITH MORE STRUCTURE AND CONFIDENCE.
+  </div>
+
+  <div class="timeline" id="timeline">
+    <svg class="curves-svg" id="curvesSvg"></svg>
+  </div>
+
+  <div class="input-section">
+    <div class="input-bar" id="inputBar">
+      <span class="placeholder-text">YOUR QUESTION...</span>
+      <textarea id="textarea" rows="1" placeholder="Type your question..."></textarea>
+      <button class="send-btn" id="sendBtn" disabled>
+        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 1l7 7-7 7M15 8H1" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const WEBHOOK_URL = 'https://nonpatented-enchantedly-reyes.ngrok-free.dev/webhook/f406671e-c954-4691-b39a-66c90aa2f103/chat';
+const ROUTE       = 'general';
+const AGENT_AVATAR = '';
+
+const INITIAL = [
+  { side: 'left',  text: 'Interactively myocardinate future-proof benefits for 24/7 networks. Credibly create enterprise relationships whereas turnkey channels. Seamlessly harness client-centered.' },
+  { side: 'right', text: 'Proactively conceptualize user-centric bandwidth via seamless infrastructures. Conveniently.' },
+  { side: 'left',  text: 'Completely transition an expanded array of e-commerce rather than proactive supply chains. Rapidiously deploy premier imperatives for cross-unit bandwidth. Authoritatively integrate multimedia based leadership after economically sound deliverables. Distinctively recaptiualize process-centric leadership before team building data.<br><br>Rapidiously leverage other\'s 2.0 content whereas interactive technology. Conveniently visualize frictionless human capital whereas bricks-and-clicks applications. Proactively engage compelling schemas for.' },
+  { side: 'right', text: 'Completely transition an expanded array of e-commerce rather than proactive supply chains. Rapidiously deploy premier imperatives for cross-unit bandwidth. Authoritatively integrate multimedia based leadership after economically sound deliverables. Distinctively recaptiualize process-centric leadership before team building data.<br><br>Rapidiously leverage other\'s 2.0 content whereas interactive technology. Conveniently visualize frictionless human capital whereas bricks-and-clicks applications. Proactively engage compelling schemas for.' },
+];
+
+const timeline  = document.getElementById('timeline');
+const svg       = document.getElementById('curvesSvg');
+const inputBar  = document.getElementById('inputBar');
+const textarea  = document.getElementById('textarea');
+const sendBtn   = document.getElementById('sendBtn');
+const sessionId = crypto.randomUUID();
+
+function addMsg(text, side, typing = false) {
+  const row = document.createElement('div');
+  row.className = `msg-row ${side}`;
+  row.dataset.side = side;
+
+  if (side === 'right') {
+    const av = document.createElement('div');
+    av.className = 'avatar';
+    av.innerHTML = AGENT_AVATAR
+      ? `<img src="${AGENT_AVATAR}" alt="">`
+      : `<div class="avatar-initials">T</div>`;
+    row.appendChild(av);
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = typing
+    ? `<div class="typing-dots"><span></span><span></span><span></span></div>`
+    : `<p>${text}</p>`;
+
+  const ast = document.createElement('span');
+  ast.className = 'asterisk';
+  ast.textContent = '*';
+  bubble.appendChild(ast);
+
+  row.appendChild(bubble);
+  timeline.appendChild(row);
+
+  row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  requestAnimationFrame(() => requestAnimationFrame(drawCurves));
+  return { row, bubble };
+}
+
+function drawCurves() {
+  const rows = Array.from(timeline.querySelectorAll('.msg-row'));
+  svg.innerHTML = '';
+
+  const tlRect = timeline.getBoundingClientRect();
+
+  for (let i = 0; i < rows.length - 1; i++) {
+    const from = rows[i];
+    const to   = rows[i + 1];
+    const fromAst = from.querySelector('.asterisk');
+    const toBubble = to.querySelector('.bubble');
+    if (!fromAst || !toBubble) continue;
+
+    const astRect    = fromAst.getBoundingClientRect();
+    const toRect     = toBubble.getBoundingClientRect();
+    const fromSide   = from.dataset.side;
+
+    // start: center of asterisk
+    const x1 = astRect.left + astRect.width  / 2 - tlRect.left;
+    const y1 = astRect.top  + astRect.height / 2 - tlRect.top;
+
+    // end: middle-left or middle-right of target bubble
+    const x2 = fromSide === 'left'
+      ? toRect.right - tlRect.left   // going to right-side bubble → arrive from its right
+      : toRect.left  - tlRect.left;  // going to left-side bubble  → arrive from its left
+    const y2 = toRect.top + toRect.height / 2 - tlRect.top;
+
+    // control points: push horizontally outward for the curve
+    const push = fromSide === 'left' ? 80 : -80;
+    const cx1  = x1 + push;
+    const cx2  = x2 + (fromSide === 'left' ? 60 : -60);
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M ${x1} ${y1} C ${cx1} ${y1}, ${cx2} ${y2}, ${x2} ${y2}`);
+    path.setAttribute('stroke', 'rgba(160,80,20,0.5)');
+    path.setAttribute('stroke-width', '1.5');
+    path.setAttribute('fill', 'none');
+    svg.appendChild(path);
+  }
+}
+
+INITIAL.forEach(m => addMsg(m.text, m.side));
+
+inputBar.addEventListener('click', () => {
+  inputBar.classList.add('active');
+  textarea.focus();
+});
+
+textarea.addEventListener('blur', () => {
+  if (!textarea.value.trim()) inputBar.classList.remove('active');
+});
+
+textarea.addEventListener('input', () => {
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+  sendBtn.disabled = !textarea.value.trim();
+});
+
+textarea.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
+});
+sendBtn.addEventListener('click', submit);
+
+async function submit() {
+  const msg = textarea.value.trim();
+  if (!msg) return;
+
+  textarea.value = '';
+  textarea.style.height = 'auto';
+  sendBtn.disabled = true;
+  textarea.disabled = true;
+
+  addMsg(msg, 'left');
+  const { bubble: typingBubble } = addMsg('', 'right', true);
+
+  try {
+    const res  = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ chatInput: msg, sessionId, route: ROUTE })
+    });
+    const data = await res.json();
+    typingBubble.innerHTML = `<p>${data.output || "Sorry, I couldn't process that."}</p>`;
+  } catch {
+    typingBubble.innerHTML = `<p style="color:var(--text-dim)">Connection error. Please try again.</p>`;
+  }
+
+  // re-add asterisk after replacing innerHTML
+  const ast = document.createElement('span');
+  ast.className = 'asterisk';
+  ast.textContent = '*';
+  typingBubble.appendChild(ast);
+
+  requestAnimationFrame(() => requestAnimationFrame(drawCurves));
+  textarea.disabled = false;
+  sendBtn.disabled = false;
+  textarea.focus();
+}
+
+window.addEventListener('resize', drawCurves);
+</script>
+</body>
+</html>
